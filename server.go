@@ -1,47 +1,33 @@
 package studies
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"time"
 
 	"github.com/joyrexus/buckets"
 	"github.com/julienschmidt/httprouter"
 )
 
-const verbose = false // if `true` you'll see log output
+const verbose = true // if `true` you'll see log output
 
-func NewServer(bxPath string) *Server {
+func NewServer(addr, dbpath string) *Server {
 	// Open a buckets database.
-	bx, err := buckets.Open(bxPath)
+	bux, err := buckets.Open(dbpath)
 	if err != nil {
-		log.Fatalf("couldn't open buckets db %q: %v\n", bxPath, err)
-	}
-
-	// Create/open bucket for storing study metadata.
-	studies, err := bx.New([]byte("studies"))
-	if err != nil {
-		log.Fatalf("couldn't create/open studies bucket: %v\n", err)
-	}
-
-	// Create/open bucket for storing list of study names.
-	studylist, err := bx.New([]byte("studylist"))
-	if err != nil {
-		log.Fatalf("couldn't create/open studylist bucket: %v\n", err)
+		log.Fatalf("couldn't open buckets db %q: %v\n", dbpath, err)
 	}
 
 	// Initialize our controller for handling specific routes.
-	control := NewController(studies, studylist)
+	control := NewController(addr, bux)
 
 	// Create and setup our router.
 	mux := httprouter.New()
-	mux.GET("/studies", control.getStudies)
-	mux.POST("/studies", control.postStudy)
-	mux.GET("/studies/:id", control.getStudy)
+	mux.POST("/studies", control.studies.post)
+	mux.GET("/studies", control.studies.list)
+	mux.GET("/studies/:name", control.studies.get)
 	/*
 		mux.DELETE("/studies/:study", control.deleteStudy)
 
@@ -56,70 +42,87 @@ func NewServer(bxPath string) *Server {
 		mux.DELETE("/studies/:study/trials/:trial", control.deleteTrial)
 	*/
 
-	// Start our web server.
-	srv := httptest.NewServer(mux)
-	return &Server{srv.URL, bx, srv}
+	return &Server{addr, mux, bux}
 }
 
 type Server struct {
-	URL        string
-	buckets    *buckets.DB
-	httpserver *httptest.Server
+	Addr    string
+	handler *httprouter.Router
+	db      *buckets.DB
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.handler.ServeHTTP(w, r)
+}
+
+func (s *Server) ListenAndServe() error {
+	return http.ListenAndServe(s.Addr, s.handler)
 }
 
 func (s *Server) Close() {
-	s.buckets.Close()
-	s.httpserver.Close()
+	s.db.Close()	
 }
 
 /* -- MODELS --*/
 
 // A Resource models an experimental resource.
 type Resource struct {
-	ID       string
-	Version  string
-	Created  time.Time
-	Type     string `json:"resource"`
-	Data     json.RawMessage
-	Children []string `json:",omitempty"`
-}
-
-// Encode marshals the raw data message of a resource into
-// a r/w buffer.
-func (r *Resource) Encode() (*bytes.Buffer, error) {
-	b, err := r.Data.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewBuffer(b), nil
+	Version  string          `json:"version"`
+	Type     string          `json:"resource"` // "study", "trial", "file"
+	ID       string          `json:"id"`       // resource identifier/name
+	URL      string          `json:"url"`      // resource url
+	Data     json.RawMessage `json:"data"`
+	Created  string          `json:"created,omitempty"`
+	Children []string        `json:"children,omitempty"`
 }
 
 // A Collection models a set of resources.
 type Collection struct {
-	Version string // API version number
-	Type    string // type of resource: "study", "trial", "file"
-	IDs     []string
+	Version string      `json:"version"` // API version number
+	Type    string      `json:"type"`    // type of resource collection
+	Items   []*Resource `json:"items"`
 }
 
-/* -- CONTROLLER -- */
+/* -- CONTROLLERS -- */
 
 // NewController initializes a new instance of our controller.
 // It provides handler methods for our router.
-func NewController(studies *buckets.Bucket, studylist *buckets.Bucket) *Controller {
-	return &Controller{studies, studylist}
+func NewController(host string, bux *buckets.DB) *Controller {
+	studies := NewStudyController(host, bux)
+	return &Controller{studies}
 }
 
-// This Controller handles requests for resources.  The raw data messages
-// of resources are stored in the META bucket. Resource request URLs are
-// used as bucket keys and the raw json payload as values.
 type Controller struct {
+	studies *StudyController
+}
+
+// NewStudyController initializes a new instance of our study controller.
+func NewStudyController(host string, bux *buckets.DB) *StudyController {
+	// Create/open bucket for storing study metadata.
+	studies, err := bux.New([]byte("studies"))
+	if err != nil {
+		log.Fatalf("couldn't create/open studies bucket: %v\n", err)
+	}
+
+	// Create/open bucket for storing list of study names.
+	studylist, err := bux.New([]byte("studylist"))
+	if err != nil {
+		log.Fatalf("couldn't create/open studylist bucket: %v\n", err)
+	}
+
+	return &StudyController{host, studies, studylist}
+}
+
+// This Controller handles requests for study resources.
+type StudyController struct {
+	host      string
 	studies   *buckets.Bucket
 	studylist *buckets.Bucket
 }
 
-// postStudy handles POST requests for `/studies`, returning a list of
+// post handles POST requests for `/studies`, returning a list of
 // available studies.
-func (c *Controller) postStudy(w http.ResponseWriter, r *http.Request,
+func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	var study Resource
@@ -127,7 +130,7 @@ func (c *Controller) postStudy(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
-	key := []byte(fmt.Sprintf("/studies/%s", study.ID))
+	key := []byte(study.ID)
 	now := []byte(time.Now().Format(time.RFC3339Nano))
 	if c.studylist.Put(key, now); err != nil {
 		http.Error(w, err.Error(), 500)
@@ -142,34 +145,46 @@ func (c *Controller) postStudy(w http.ResponseWriter, r *http.Request,
 	// json.NewEncoder(w).Encode( ... )
 }
 
-// getStudies handles GET requests for `/studies`, returning the collection 
+// list handles GET requests for `/studies`, returning the collection
 // of available studies.
-func (c *Controller) getStudies(w http.ResponseWriter, r *http.Request,
+func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
-	items, err := c.studylist.Items()
+	list, err := c.studylist.Items()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 
-	// Generate a list of study IDs for the collection.
-	ids:= []string{}
+	// Generate a list of studies for the collection.
+	studies := []*Resource{}
 
-	for _, study := range items {
-		ids = append(ids, string(study.Key))
+	for _, s := range list {
+		data, err := c.studies.Get(s.Key)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+		study := &Resource{
+			Version: "1",
+			Type:    "study",
+			ID:      string(s.Key),
+			Data:    data,
+			Created: string(s.Value),
+		}
+		studies = append(studies, study)
 	}
 
-	cx := &Collection{"1", "study", ids}
+	cx := &Collection{"1", "study", studies}
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(cx)
 }
 
-// getStudy handles GET requests for `/studies/:id`.
-func (c *Controller) getStudy(w http.ResponseWriter, r *http.Request,
+// get handles GET requests for `/studies/:name`.
+func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	id := p.ByName("id")
-	key := []byte(fmt.Sprintf("/studies/%s", id))
+	name := p.ByName("name")
+	key := []byte(fmt.Sprintf("/studies/%s", name))
 	data, err := c.studies.Get(key)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
