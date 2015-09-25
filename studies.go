@@ -97,13 +97,13 @@ func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
 	json.NewEncoder(w).Encode(resources)
 }
 
-// get handles GET requests for `/studies/:name`, returning the raw json
+// get handles GET requests for `/studies/:study`, returning the raw json
 // data payload for the requested study name.
 func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	name := p.ByName("name")
-	key := []byte(fmt.Sprintf("/studies/%s", name))
+	study := p.ByName("study")
+	key := []byte(fmt.Sprintf("/studies/%s", study))
 	data, err := c.studies.Get(key)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -116,12 +116,12 @@ func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-// delete handles DELETE requests for `/studies/:name`.
+// delete handles DELETE requests for `/studies/:study`.
 func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	name := p.ByName("name")
-	key := []byte(fmt.Sprintf("/studies/%s", name))
+	study := p.ByName("study")
+	key := []byte(fmt.Sprintf("/studies/%s", study))
 	err := c.studies.Delete(key)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

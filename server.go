@@ -25,8 +25,8 @@ func NewServer(addr, dbpath string) *Server {
 	mux := httprouter.New()
 	mux.POST("/studies", control.studies.post)
 	mux.GET("/studies", control.studies.list)
-	mux.GET("/studies/:name", control.studies.get)
-	mux.DELETE("/studies/:name", control.studies.delete)
+	mux.GET("/studies/:study", control.studies.get)
+	mux.DELETE("/studies/:study", control.studies.delete)
 	/*
 		mux.GET("/studies/:study/files", control.getFiles)
 		mux.POST("/studies/:study/files", control.postFile)
