@@ -13,7 +13,7 @@ import (
 
 // NewStudyController initializes a new instance of our study controller.
 func NewStudyController(host string, bux *buckets.DB) *StudyController {
-	// Create/open bucket for storing study data.
+	// Create/open bucket for storing study-related data.
 	studies, err := bux.New([]byte("studies"))
 	if err != nil {
 		log.Fatalf("couldn't create/open studies bucket: %v\n", err)

@@ -31,7 +31,7 @@ func NewServer(addr, dbpath string) *Server {
 	mux.POST("/studies/:study/trials", control.trial.post)
 	mux.GET("/studies/:study/trials", control.trial.list)
 	mux.GET("/studies/:study/trials/:trial", control.trial.get)
-	// mux.DELETE("/studies/:study/trials/:trial", control.trial.delete)
+	mux.DELETE("/studies/:study/trials/:trial", control.trial.delete)
 	/*
 		mux.POST("/studies/:study/files", control.file.post)
 		mux.GET("/studies/:study/files", control.file.list)

@@ -12,7 +12,7 @@ import (
 
 // NewTrialController initializes a new instance of our trial controller.
 func NewTrialController(host string, bux *buckets.DB) *TrialController {
-	// Create/open bucket for storing study data.
+	// Create/open bucket for storing study-related data.
 	studies, err := bux.New([]byte("studies"))
 	if err != nil {
 		log.Fatalf("couldn't create/open studies bucket: %v\n", err)
@@ -93,18 +93,16 @@ func (c *TrialController) get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-/*
 // delete handles DELETE requests for `/studies/:study/trials/:trial`.
-func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
+func (c *TrialController) delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	name := p.ByName("name")
-	key := []byte(fmt.Sprintf("/studies/%s", name))
-	err := c.studies.Delete(key)
+	study, trial := p.ByName("study"), p.ByName("trial")
+	id := fmt.Sprintf("/studies/%s/trials/%s", study, trial)
+	err := c.studies.Delete([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
-*/
