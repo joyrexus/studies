@@ -23,20 +23,20 @@ func NewServer(addr, dbpath string) *Server {
 
 	// Create and setup our router.
 	mux := httprouter.New()
-	mux.POST("/studies", control.studies.post)
-	mux.GET("/studies", control.studies.list)
-	mux.GET("/studies/:study", control.studies.get)
-	mux.DELETE("/studies/:study", control.studies.delete)
+	mux.POST("/studies", control.study.post)
+	mux.GET("/studies", control.study.list)
+	mux.GET("/studies/:study", control.study.get)
+	mux.DELETE("/studies/:study", control.study.delete)
+
+	// mux.POST("/studies/:study/trials", control.trials.post)
+	// mux.GET("/studies/:study/trials", control.trials.get)
+	// mux.GET("/studies/:study/trials/:trial", control.trials.list)
+	// mux.DELETE("/studies/:study/trials/:trial", control.trials.delete)
 	/*
 		mux.GET("/studies/:study/files", control.getFiles)
 		mux.POST("/studies/:study/files", control.postFile)
 		mux.GET("/studies/:study/files/:file", control.getFile)
 		mux.DELETE("/studies/:study/files/:file", control.deleteFile)
-
-		mux.GET("/studies/:study/trials", control.getTrials)
-		mux.POST("/studies/:study/trials", control.postTrial)
-		mux.GET("/studies/:study/trials/:trial", control.getTrial)
-		mux.DELETE("/studies/:study/trials/:trial", control.deleteTrial)
 	*/
 
 	return &Server{addr, mux, bux}
@@ -60,6 +60,20 @@ func (s *Server) Close() {
 	s.db.Close()
 }
 
+/* -- CONTROLLER -- */
+
+// NewController initializes a new instance of our controller.
+// It provides handler methods for our router.
+func NewController(host string, bux *buckets.DB) *Controller {
+	study := NewStudyController(host, bux)
+	// trial := NewTrialController(host, bux)
+	return &Controller{study}
+}
+
+type Controller struct {
+	study *StudyController
+}
+
 /* -- MODELS --*/
 
 // A Resource models an experimental resource.
@@ -71,17 +85,4 @@ type Resource struct {
 	Data     json.RawMessage `json:"data"`
 	Created  string          `json:"created,omitempty"`
 	Children []string        `json:"children,omitempty"`
-}
-
-/* -- CONTROLLER -- */
-
-// NewController initializes a new instance of our controller.
-// It provides handler methods for our router.
-func NewController(host string, bux *buckets.DB) *Controller {
-	studies := NewStudyController(host, bux)
-	return &Controller{studies}
-}
-
-type Controller struct {
-	studies *StudyController
 }
