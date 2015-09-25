@@ -28,15 +28,15 @@ func NewServer(addr, dbpath string) *Server {
 	mux.GET("/studies/:study", control.study.get)
 	mux.DELETE("/studies/:study", control.study.delete)
 
-	// mux.POST("/studies/:study/trials", control.trials.post)
-	// mux.GET("/studies/:study/trials", control.trials.get)
-	// mux.GET("/studies/:study/trials/:trial", control.trials.list)
-	// mux.DELETE("/studies/:study/trials/:trial", control.trials.delete)
+	mux.POST("/studies/:study/trials", control.trial.post)
+	mux.GET("/studies/:study/trials", control.trial.list)
+	mux.GET("/studies/:study/trials/:trial", control.trial.get)
+	// mux.DELETE("/studies/:study/trials/:trial", control.trial.delete)
 	/*
-		mux.GET("/studies/:study/files", control.getFiles)
-		mux.POST("/studies/:study/files", control.postFile)
-		mux.GET("/studies/:study/files/:file", control.getFile)
-		mux.DELETE("/studies/:study/files/:file", control.deleteFile)
+		mux.POST("/studies/:study/files", control.file.post)
+		mux.GET("/studies/:study/files", control.file.list)
+		mux.GET("/studies/:study/files/:file", control.file.get)
+		mux.DELETE("/studies/:study/files/:file", control.file.delete)
 	*/
 
 	return &Server{addr, mux, bux}
@@ -66,12 +66,13 @@ func (s *Server) Close() {
 // It provides handler methods for our router.
 func NewController(host string, bux *buckets.DB) *Controller {
 	study := NewStudyController(host, bux)
-	// trial := NewTrialController(host, bux)
-	return &Controller{study}
+	trial := NewTrialController(host, bux)
+	return &Controller{study, trial}
 }
 
 type Controller struct {
 	study *StudyController
+	trial *TrialController
 }
 
 /* -- MODELS --*/

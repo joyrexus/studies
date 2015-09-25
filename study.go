@@ -13,13 +13,13 @@ import (
 
 // NewStudyController initializes a new instance of our study controller.
 func NewStudyController(host string, bux *buckets.DB) *StudyController {
-	// Create/open bucket for storing study metadata.
+	// Create/open bucket for storing study data.
 	studies, err := bux.New([]byte("studies"))
 	if err != nil {
 		log.Fatalf("couldn't create/open studies bucket: %v\n", err)
 	}
 
-	// Create/open bucket for storing list of study names.
+	// Create/open bucket for storing list of study IDs.
 	studylist, err := bux.New([]byte("studylist"))
 	if err != nil {
 		log.Fatalf("couldn't create/open studylist bucket: %v\n", err)
@@ -35,8 +35,7 @@ type StudyController struct {
 	studylist *buckets.Bucket
 }
 
-// post handles POST requests for `/studies`, creating/persisting a new study
-// resource.
+// post handles POST requests for `/studies`, storing the study data sent.
 func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
@@ -53,11 +52,7 @@ func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
 	if err := c.studies.Put(key, study.Data); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	// Return an appropriate response?
-	// json.NewEncoder(w).Encode( ... )
 }
 
 // list handles GET requests for `/studies`, returning a list of 
@@ -98,7 +93,7 @@ func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
 }
 
 // get handles GET requests for `/studies/:study`, returning the raw json
-// data payload for the requested study name.
+// data payload for the requested study.
 func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
@@ -116,13 +111,21 @@ func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-// delete handles DELETE requests for `/studies/:study`.
+// delete handles DELETE requests for `/studies/:study`, deleting the entries
+// for the given study.
 func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
 	key := []byte(fmt.Sprintf("/studies/%s", study))
+
+	// Delete item in main studies bucket.
 	err := c.studies.Delete(key)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+	// Delete item in studylist bucket.
+	err = c.studylist.Delete(key)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}

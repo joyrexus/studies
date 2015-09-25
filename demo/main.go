@@ -19,11 +19,11 @@ const verbose = false // if `true` you'll see log output
 func main() {
 	// Create a new studies server.
 	addr := "127.0.0.1:8081" // server address to use
-	dbfile := "studies.db" // path to file to use for persisting study data
+	dbfile := "studies.db"   // path to file to use for persisting study data
 	srv := studies.NewServer(addr, dbfile)
 
 	// Run our server as an http test server.
-	// 
+	//
 	// Normally we'd start the server with `srv.ListenAndServe()`,
 	// but running as a test server let's us shut down the server
 	// and remove the database file afterward.
@@ -32,55 +32,89 @@ func main() {
 	defer testsrv.Close()
 	defer os.Remove(dbfile)
 
-	// Setup study resources for our client to post: study_a, _b, _c.
-	var posts []*Resource
+	// Setup study resources for our client to post.
+	var studies []*Resource
+
 	for _, x := range []string{"a", "b", "c"} {
 		name := "study_" + x
 		desc := "A description of study_" + x
 		id := "/studies/" + name
-		data := &StudyData{name, desc}
-		r := &Resource{"1", "study", id, data, time.Now()}
-		posts = append(posts, r)
+		data := &Data{name, desc}
+		r := &Resource{
+			Version: "1",
+			Type:    "study",
+			ID:      id,
+			Data:    data,
+			Created: time.Now(),
+		}
+		studies = append(studies, r)
+	}
+
+	// Setup trial resources for our client to post.
+	var trials []*Resource
+
+	for _, x := range []string{"1", "2", "3"} {
+		// Now append a few trials
+		name := "trial_" + x
+		desc := "A description of trial_" + x
+		id := "/studies/study_a/trials/trial_" + x
+		data := &Data{name, desc}
+		r := &Resource{
+			Version: "1",
+			Type:    "trial",
+			ID:      id,
+			Data:    data,
+			Created: time.Now(),
+		}
+		trials = append(trials, r)
 	}
 
 	// Create our helper http client.
 	client := new(Client)
-	url := testsrv.URL + "/studies"
+	host := testsrv.URL
 
-	// Use our client to post each study resource.
-	for _, study := range posts {
+	// Use our client to post each study.
+	for _, study := range studies {
+		url := host + "/studies"
 		if err := client.post(url, study); err != nil {
+			fmt.Printf("client post error: %v\n", err)
+		}
+	}
+
+	// Use our client to post each trial.
+	for _, trial := range trials {
+		url := host + "/studies/study_a/trials"
+		if err := client.post(url, trial); err != nil {
 			fmt.Printf("client post error: %v\n", err)
 		}
 	}
 
 	// Now, let's try retrieving the persisted studies.
 
-	// Get collection of studies created.
-	cx, err := client.list(url)
+	// Get list of studies created.
+	items, err := client.list(host + "/studies")
 	if err != nil {
-		log.Fatalf("client get error: %v\n", err)
+		log.Fatalf("client list error: %v\n", err)
 	}
-	
-	fmt.Println("items in collection ...")
-	for _, item := range cx {
-		study := new(StudyData)
-		if err := json.Unmarshal(item.Data, &study); err != nil {
+
+	fmt.Println("studies ...")
+	for _, item := range items {
+		data := new(Data)
+		if err := json.Unmarshal(item.Data, &data); err != nil {
 			log.Fatalf("client unmarshal error: %v\n", err)
 		}
-		fmt.Printf("  %s: %+v\n", item.ID, study)
+		fmt.Printf("  %s: %+v\n", item.ID, data)
 	}
 	// Output:
-	// items in study collection ...
+	// studies ...
 	//   /studies/study_a: &{Name:study_a Description:A description of study_a}
 	//   /studies/study_b: &{Name:study_b Description:A description of study_b}
 	//   /studies/study_c: &{Name:study_c Description:A description of study_c}
 
-
-	// Now use the collection's list of study items to retrieve
-    // each study individually.
-	for _, item := range cx {
-		study, err := client.get(testsrv.URL + item.ID)
+	// Now use the list of study items to retrieve
+	// each study individually.
+	for _, item := range items {
+		study, err := client.get(host + item.ID)
 		if err != nil {
 			log.Fatalf("client get error: %v\n", err)
 		}
@@ -90,6 +124,40 @@ func main() {
 	// study_a: A description of study_a
 	// study_b: A description of study_b
 	// study_c: A description of study_c
+
+	// Get list of trials created for study_a.
+	items, err = client.list(host + "/studies/study_a/trials")
+	if err != nil {
+		log.Fatalf("client list error: %v\n", err)
+	}
+
+	fmt.Println("trials ...")
+	for _, item := range items {
+		data := new(Data)
+		if err := json.Unmarshal(item.Data, &data); err != nil {
+			log.Fatalf("client unmarshal error: %v\n", err)
+		}
+		fmt.Printf("  %s: %+v\n", item.ID, data)
+	}
+	// Output:
+	// trials ...
+	//   /studies/study_a/trials/trial_1: &{Name:trial_1 Description:A description of trial_1}
+	//   /studies/study_a/trials/trial_2: &{Name:trial_2 Description:A description of trial_2}
+	//   /studies/study_a/trials/trial_3: &{Name:trial_3 Description:A description of trial_3}
+
+	// Now use the list of trial items to retrieve
+	// each trial individually.
+	for _, item := range items {
+		trial, err := client.get(host + item.ID)
+		if err != nil {
+			log.Fatalf("client get error: %v\n", err)
+		}
+		fmt.Printf("%s: %s\n", trial.Name, trial.Description)
+	}
+	// Output:
+	// trial_1: A description of trial_1
+	// trial_2: A description of trial_2
+	// trial_3: A description of trial_3
 }
 
 /* -- CLIENT -- */
@@ -126,14 +194,14 @@ func (c *Client) list(url string) ([]Item, error) {
 
 	var items []Item
 	if err = json.NewDecoder(resp.Body).Decode(&items); err != nil {
-		return nil, err
+		return nil, errors.New("decoding error: " + err.Error())
 	}
 	return items, nil
 }
 
 // get sends GET requests for a particular resource.  It expects responses
 // to be json-encoded resource representations.
-func (c *Client) get(url string) (*StudyData, error) {
+func (c *Client) get(url string) (*Data, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -144,7 +212,7 @@ func (c *Client) get(url string) (*StudyData, error) {
 		return nil, errors.New(resp.Status + ": " + url)
 	}
 
-	data := new(StudyData)
+	data := new(Data)
 	if err = json.NewDecoder(resp.Body).Decode(data); err != nil {
 		return nil, fmt.Errorf("decoding error: %v", err)
 	}
@@ -153,8 +221,8 @@ func (c *Client) get(url string) (*StudyData, error) {
 
 /* -- MODELS -- */
 
-// StudyData models the data payload portion of a study resource.
-type StudyData struct {
+// Data models the data payload portion of a resource.
+type Data struct {
 	Name        string `json:"name"`
 	Description string `json:"desc"`
 }
