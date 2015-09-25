@@ -2,10 +2,8 @@ package studies
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/joyrexus/buckets"
 	"github.com/julienschmidt/httprouter"
@@ -28,9 +26,8 @@ func NewServer(addr, dbpath string) *Server {
 	mux.POST("/studies", control.studies.post)
 	mux.GET("/studies", control.studies.list)
 	mux.GET("/studies/:name", control.studies.get)
+	mux.DELETE("/studies/:name", control.studies.delete)
 	/*
-		mux.DELETE("/studies/:study", control.deleteStudy)
-
 		mux.GET("/studies/:study/files", control.getFiles)
 		mux.POST("/studies/:study/files", control.postFile)
 		mux.GET("/studies/:study/files/:file", control.getFile)
@@ -60,7 +57,7 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) Close() {
-	s.db.Close()	
+	s.db.Close()
 }
 
 /* -- MODELS --*/
@@ -76,14 +73,7 @@ type Resource struct {
 	Children []string        `json:"children,omitempty"`
 }
 
-// A Collection models a set of resources.
-type Collection struct {
-	Version string      `json:"version"` // API version number
-	Type    string      `json:"type"`    // type of resource collection
-	Items   []*Resource `json:"items"`
-}
-
-/* -- CONTROLLERS -- */
+/* -- CONTROLLER -- */
 
 // NewController initializes a new instance of our controller.
 // It provides handler methods for our router.
@@ -95,105 +85,3 @@ func NewController(host string, bux *buckets.DB) *Controller {
 type Controller struct {
 	studies *StudyController
 }
-
-// NewStudyController initializes a new instance of our study controller.
-func NewStudyController(host string, bux *buckets.DB) *StudyController {
-	// Create/open bucket for storing study metadata.
-	studies, err := bux.New([]byte("studies"))
-	if err != nil {
-		log.Fatalf("couldn't create/open studies bucket: %v\n", err)
-	}
-
-	// Create/open bucket for storing list of study names.
-	studylist, err := bux.New([]byte("studylist"))
-	if err != nil {
-		log.Fatalf("couldn't create/open studylist bucket: %v\n", err)
-	}
-
-	return &StudyController{host, studies, studylist}
-}
-
-// This Controller handles requests for study resources.
-type StudyController struct {
-	host      string
-	studies   *buckets.Bucket
-	studylist *buckets.Bucket
-}
-
-// post handles POST requests for `/studies`, returning a list of
-// available studies.
-func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
-	_ httprouter.Params) {
-
-	var study Resource
-	err := json.NewDecoder(r.Body).Decode(&study)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-	key := []byte(study.ID)
-	now := []byte(time.Now().Format(time.RFC3339Nano))
-	if c.studylist.Put(key, now); err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-	if c.studies.Put(key, study.Data); err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	// Return an appropriate response?
-	// json.NewEncoder(w).Encode( ... )
-}
-
-// list handles GET requests for `/studies`, returning the collection
-// of available studies.
-func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
-	_ httprouter.Params) {
-
-	list, err := c.studylist.Items()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-
-	// Generate a list of studies for the collection.
-	studies := []*Resource{}
-
-	for _, s := range list {
-		data, err := c.studies.Get(s.Key)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-		}
-		study := &Resource{
-			Version: "1",
-			Type:    "study",
-			ID:      string(s.Key),
-			Data:    data,
-			Created: string(s.Value),
-		}
-		studies = append(studies, study)
-	}
-
-	cx := &Collection{"1", "study", studies}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(cx)
-}
-
-// get handles GET requests for `/studies/:name`.
-func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
-	p httprouter.Params) {
-
-	name := p.ByName("name")
-	key := []byte(fmt.Sprintf("/studies/%s", name))
-	data, err := c.studies.Get(key)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-	if data == nil {
-		http.Error(w, "NOT FOUND", 404)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-

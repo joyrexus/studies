@@ -62,8 +62,8 @@ func main() {
 		log.Fatalf("client get error: %v\n", err)
 	}
 	
-	fmt.Printf("items in %s collection ...\n", cx.Type)
-	for _, item := range cx.Items {
+	fmt.Println("items in collection ...")
+	for _, item := range cx {
 		study := new(StudyData)
 		if err := json.Unmarshal(item.Data, &study); err != nil {
 			log.Fatalf("client unmarshal error: %v\n", err)
@@ -79,7 +79,7 @@ func main() {
 
 	// Now use the collection's list of study items to retrieve
     // each study individually.
-	for _, item := range cx.Items {
+	for _, item := range cx {
 		study, err := client.get(testsrv.URL + item.ID)
 		if err != nil {
 			log.Fatalf("client get error: %v\n", err)
@@ -115,19 +115,20 @@ func (c *Client) post(url string, resource *Resource) error {
 	return nil
 }
 
-// list sends GET requests for resource collections.
-func (c *Client) list(url string) (*Collection, error) {
+// list sends GET requests for resource collections, returning a list of
+// resources.
+func (c *Client) list(url string) ([]Item, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	cx := new(Collection)
-	if err = json.NewDecoder(resp.Body).Decode(cx); err != nil {
+	var items []Item
+	if err = json.NewDecoder(resp.Body).Decode(&items); err != nil {
 		return nil, err
 	}
-	return cx, nil
+	return items, nil
 }
 
 // get sends GET requests for a particular resource.  It expects responses
@@ -152,17 +153,10 @@ func (c *Client) get(url string) (*StudyData, error) {
 
 /* -- MODELS -- */
 
-// StudyData models the data payload portion of a resource.
+// StudyData models the data payload portion of a study resource.
 type StudyData struct {
 	Name        string `json:"name"`
 	Description string `json:"desc"`
-}
-
-// A Collection models a collection of resources.
-type Collection struct {
-	Version string // API version number
-	Type    string // type of resource collection: "study", "trial", "file"
-	Items   []*Item
 }
 
 // An Item models an experimental resource, received as part
