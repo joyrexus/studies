@@ -35,8 +35,8 @@ type StudyController struct {
 	studylist *buckets.Bucket
 }
 
-// post handles POST requests for `/studies`, storing the study data sent.
-func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
+// Post handles POST requests for `/studies`, storing the study data sent.
+func (c *StudyController) Post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	var study Resource
@@ -55,9 +55,9 @@ func (c *StudyController) post(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusCreated)
 }
 
-// list handles GET requests for `/studies`, returning a list of 
+// List handles GET requests for `/studies`, returning a list of 
 // available studies.
-func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
+func (c *StudyController) List(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	// Retrieve studylist items (study-id/creation-time pairs)
@@ -92,9 +92,9 @@ func (c *StudyController) list(w http.ResponseWriter, r *http.Request,
 	json.NewEncoder(w).Encode(resources)
 }
 
-// get handles GET requests for `/studies/:study`, returning the raw json
+// Get handles GET requests for `/studies/:study`, returning the raw json
 // data payload for the requested study.
-func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
+func (c *StudyController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
@@ -111,9 +111,9 @@ func (c *StudyController) get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-// delete handles DELETE requests for `/studies/:study`, deleting the entries
+// Delete handles DELETE requests for `/studies/:study`, deleting the entries
 // for the given study.
-func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
+func (c *StudyController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")

@@ -23,20 +23,20 @@ func NewServer(addr, dbpath string) *Server {
 
 	// Create and setup our router.
 	mux := httprouter.New()
-	mux.POST("/studies", control.study.post)
-	mux.GET("/studies", control.study.list)
-	mux.GET("/studies/:study", control.study.get)
-	mux.DELETE("/studies/:study", control.study.delete)
+	mux.POST("/studies", control.Study.Post)
+	mux.GET("/studies", control.Study.List)
+	mux.GET("/studies/:study", control.Study.Get)
+	mux.DELETE("/studies/:study", control.Study.Delete)
 
-	mux.POST("/studies/:study/trials", control.trial.post)
-	mux.GET("/studies/:study/trials", control.trial.list)
-	mux.GET("/studies/:study/trials/:trial", control.trial.get)
-	mux.DELETE("/studies/:study/trials/:trial", control.trial.delete)
+	mux.POST("/studies/:study/trials", control.Trial.Post)
+	mux.GET("/studies/:study/trials", control.Trial.List)
+	mux.GET("/studies/:study/trials/:trial", control.Trial.Get)
+	mux.DELETE("/studies/:study/trials/:trial", control.Trial.Delete)
 	/*
-		mux.POST("/studies/:study/files", control.file.post)
-		mux.GET("/studies/:study/files", control.file.list)
-		mux.GET("/studies/:study/files/:file", control.file.get)
-		mux.DELETE("/studies/:study/files/:file", control.file.delete)
+		mux.POST("/studies/:study/files", control.File.Post)
+		mux.GET("/studies/:study/files", control.File.List)
+		mux.GET("/studies/:study/files/:file", control.File.Get)
+		mux.DELETE("/studies/:study/files/:file", control.File.Delete)
 	*/
 
 	return &Server{addr, mux, bux}
@@ -71,8 +71,8 @@ func NewController(host string, bux *buckets.DB) *Controller {
 }
 
 type Controller struct {
-	study *StudyController
-	trial *TrialController
+	Study *StudyController
+	Trial *TrialController
 }
 
 /* -- MODELS --*/

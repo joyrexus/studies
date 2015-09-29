@@ -26,9 +26,9 @@ type TrialController struct {
 	studies *buckets.Bucket
 }
 
-// post handles POST requests for `/studies/:study/trials`, storing
+// Post handles POST requests for `/studies/:study/trials`, storing
 // the trial data sent.
-func (c *TrialController) post(w http.ResponseWriter, r *http.Request,
+func (c *TrialController) Post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	var trial Resource
@@ -43,9 +43,9 @@ func (c *TrialController) post(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusCreated)
 }
 
-// list handles GET requests for `/studies/:study/trials`, returning a list
+// List handles GET requests for `/studies/:study/trials`, returning a list
 // of available trials for a particular study.
-func (c *TrialController) list(w http.ResponseWriter, r *http.Request,
+func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
@@ -74,9 +74,9 @@ func (c *TrialController) list(w http.ResponseWriter, r *http.Request,
 	json.NewEncoder(w).Encode(resources)
 }
 
-// get handles GET requests for `/studies/:study/trials/:trial`, returning 
+// Get handles GET requests for `/studies/:study/trials/:trial`, returning 
 // the raw json data payload for the requested trial.
-func (c *TrialController) get(w http.ResponseWriter, r *http.Request,
+func (c *TrialController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, trial := p.ByName("study"), p.ByName("trial")
@@ -93,8 +93,8 @@ func (c *TrialController) get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-// delete handles DELETE requests for `/studies/:study/trials/:trial`.
-func (c *TrialController) delete(w http.ResponseWriter, r *http.Request,
+// Delete handles DELETE requests for `/studies/:study/trials/:trial`.
+func (c *TrialController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, trial := p.ByName("study"), p.ByName("trial")
