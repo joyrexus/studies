@@ -1,70 +1,99 @@
 package studies_test
 
 import (
-	"log"
+	"encoding/json"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
-
-	"github.com/joyrexus/buckets"
-	"github.com/joyrexus/studies"
-	"github.com/julienschmidt/httprouter"
 )
 
 func TestStudyController(t *testing.T) {
-	control := NewTestController()
-	defer control.Close()
+	srv := NewTestServer()
+	defer srv.Close()
 
+	// Create a study resource to be posted.
 	study := &Resource{
 		Version: "1",
 		Type:    "study",
 		ID:      "/studies/test_study",
-		Data: Data{
-			Name:        "test_study",
-			Description: "description of the test study",
+		Data: struct {
+			Name, Description string
+		}{
+			"test_study",
+			"description of the test study",
 		},
 		Created: time.Now(),
 	}
 
+	url := srv.addr + "/studies"
+	bodyType := "application/json"
 	body, err := study.Encode()
 	if err != nil {
-		t.Fatalf("could not encode study: %v", err)
+		t.Errorf("could not encode study: %v", err)
 	}
 
-	w := httptest.NewRecorder()
-	r, err := http.NewRequest("POST", "http://localhost/studies", body)
+	res, err := http.Post(url, bodyType, body)
 	if err != nil {
-		t.Fatalf("error posting study: %v", err)
+		t.Errorf("error posting study: %v", err)
 	}
-	p := httprouter.Params{}
+	res.Body.Close()
 
-	control.Post(w, r, p)
-
-	want, got := http.StatusCreated, w.Code
+	want, got := http.StatusCreated, res.StatusCode
 	if want != got {
-		t.Fatalf("want %s, got %s", want, got)
+		t.Errorf("want %d, got %d", want, got)
 	}
-}
 
-/* -- TEST HELPERS -- */
-
-func NewTestController() *TestController {
-	db, err := buckets.Open(tempfile())
+	// List available studies.
+	res, err = http.Get(url)
 	if err != nil {
-		log.Fatalf("cannot open buckets database: %s", err)
+		t.Errorf("error getting study: %v", err)
 	}
-	control := studies.NewStudyController("", db)
-	return &TestController{db, control}
-}
 
-type TestController struct {
-	db *buckets.DB
-	*studies.StudyController
-}
+	want, got = http.StatusOK, res.StatusCode
+	if want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
 
-func (t *TestController) Close() {
-	t.db.Close()
-	os.Remove(t.db.Path())
+	var items []Item
+	if err = json.NewDecoder(res.Body).Decode(&items); err != nil {
+		t.Errorf("decoding error: %v", err)
+	}
+	res.Body.Close()
+
+	// Check that one and only one item was posted.
+	want, got = 1, len(items)
+	if got != want {
+		t.Errorf("want %d item, got %d", want, got)
+	}
+
+	// Check expected URL of the one posted study resource.
+	studyURL := "http://localhost:8081/studies/test_study"
+	if want, got := studyURL, items[0].URL; want != got {
+		t.Errorf("want %d item, got %d", want, got)
+
+	}
+
+	// Get the previously posted study.
+	url = srv.addr + "/studies/test_study"
+	res, err = http.Get(url)
+	if err != nil {
+		t.Errorf("error getting study: %v", err)
+	}
+
+	want, got = http.StatusOK, res.StatusCode
+	if want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	var data struct {
+		Name, Description string
+	}
+	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+		t.Errorf("decoding error: %v", err.Error())
+	}
+	res.Body.Close()
+
+	if want, got := "test_study", data.Name; want != got {
+		t.Errorf("want %s, got %s", want, got)
+	}
 }

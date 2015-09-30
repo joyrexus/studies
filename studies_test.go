@@ -14,9 +14,8 @@ import (
 
 func NewTestServer() *TestServer {
 	dbpath := tempfile()
-	handler := studies.NewServer("", dbpath)
+	handler := studies.NewServer("localhost:8081", dbpath)
 	testsrv := httptest.NewServer(handler)
-	handler.Addr = testsrv.URL
 	return &TestServer{testsrv, testsrv.URL, dbpath}
 }
 
@@ -46,6 +45,7 @@ type Item struct {
 	Version  string `json:"version"`
 	Type     string `json:"resource"` // "study", "trial", "file"
 	ID       string `json:"id"`       // resource identifier/name
+	URL      string `json:"url"`      // resource url
 	Data     json.RawMessage
 	Created  string   `json:"created,omitempty"`
 	Children []string `json:"children,omitempty"`
