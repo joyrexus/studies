@@ -8,9 +8,11 @@ import (
 	"time"
 )
 
-func TestStudyGetMissing(t *testing.T) {
+func TestStudyMissing(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()
+
+	/* -- LIST -- */
 
 	// List available studies.
 	url := srv.addr + "/studies"
@@ -35,32 +37,43 @@ func TestStudyGetMissing(t *testing.T) {
 	if got != want {
 		t.Errorf("want %d item, got %d", want, got)
 	}
+	
+	/* -- GET -- */
 
-	/*
-	// Get the previously posted study.
+	// Try to get a non-existent study.
 	url = srv.addr + "/studies/test_study"
 	res, err = http.Get(url)
 	if err != nil {
 		t.Errorf("error getting study: %v", err)
 	}
+	res.Body.Close()
 
-	want, got = http.StatusOK, res.StatusCode
-	if want != got {
+	// Ensure we get a StatusNoContent (204) response.
+	if want, got := http.StatusNoContent, res.StatusCode; want != got {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	var data struct {
-		Name, Description string
+	/* -- DELETE -- */
+
+	// Try to delete a non-existent study.
+	client := new(http.Client)
+	url = srv.addr + "/studies/test_study"
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		t.Errorf("error creating delete request: %v", err)
 	}
-	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
-		t.Errorf("decoding error: %v", err.Error())
+
+	res, err = client.Do(req)
+	if err != nil {
+		t.Errorf("error deleting study: %v", err)
 	}
 	res.Body.Close()
 
-	if want, got := studyData, data; !reflect.DeepEqual(want, got) {
-		t.Errorf("want %v, got %v", want, got)
+	// No harm done.
+	if want, got := http.StatusOK, res.StatusCode; want != got {
+		t.Errorf("want %d, got %d", want, got)
 	}
-	*/
 }
 
 func TestStudyPersistence(t *testing.T) {
@@ -158,5 +171,38 @@ func TestStudyPersistence(t *testing.T) {
 
 	if want, got := studyData, data; !reflect.DeepEqual(want, got) {
 		t.Errorf("want %v, got %v", want, got)
+	}
+
+	/* -- DELETE -- */
+
+	// Delete the previously posted study.
+	url = srv.addr + "/studies/test_study"
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		t.Errorf("error creating delete request: %v", err)
+	}
+
+	client := new(http.Client)
+	res, err = client.Do(req)
+	if err != nil {
+		t.Errorf("error deleting study: %v", err)
+	}
+	res.Body.Close()
+
+	if want, got := http.StatusOK, res.StatusCode; want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	// Now ensure the deleted study doesn't exist anymore.
+	url = srv.addr + "/studies/test_study"
+	res, err = http.Get(url)
+	if err != nil {
+		t.Errorf("error getting study: %v", err)
+	}
+	res.Body.Close()
+
+	// Ensure we get a StatusNoContent (204) response.
+	if want, got := http.StatusNoContent, res.StatusCode; want != got {
+		t.Errorf("want %d, got %d", want, got)
 	}
 }
