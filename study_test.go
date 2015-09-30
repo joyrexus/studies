@@ -3,25 +3,85 @@ package studies_test
 import (
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
 
-func TestStudyController(t *testing.T) {
+func TestStudyGetMissing(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()
+
+	// List available studies.
+	url := srv.addr + "/studies"
+	res, err := http.Get(url)
+	if err != nil {
+		t.Errorf("error getting study: %v", err)
+	}
+
+	want, got := http.StatusOK, res.StatusCode
+	if want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	var items []Item
+	if err = json.NewDecoder(res.Body).Decode(&items); err != nil {
+		t.Errorf("decoding error: %v", err)
+	}
+	res.Body.Close()
+
+	// Ensure that no items were returned.
+	want, got = 0, len(items)
+	if got != want {
+		t.Errorf("want %d item, got %d", want, got)
+	}
+
+	/*
+	// Get the previously posted study.
+	url = srv.addr + "/studies/test_study"
+	res, err = http.Get(url)
+	if err != nil {
+		t.Errorf("error getting study: %v", err)
+	}
+
+	want, got = http.StatusOK, res.StatusCode
+	if want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	var data struct {
+		Name, Description string
+	}
+	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+		t.Errorf("decoding error: %v", err.Error())
+	}
+	res.Body.Close()
+
+	if want, got := studyData, data; !reflect.DeepEqual(want, got) {
+		t.Errorf("want %v, got %v", want, got)
+	}
+	*/
+}
+
+func TestStudyPersistence(t *testing.T) {
+	srv := NewTestServer()
+	defer srv.Close()
+
+	/* -- POST -- */
+
+	studyData := struct {
+		Name, Description string
+	}{
+		"test_study",
+		"description of the test study",
+	}
 
 	// Create a study resource to be posted.
 	study := &Resource{
 		Version: "1",
 		Type:    "study",
 		ID:      "/studies/test_study",
-		Data: struct {
-			Name, Description string
-		}{
-			"test_study",
-			"description of the test study",
-		},
+		Data:    studyData,
 		Created: time.Now(),
 	}
 
@@ -42,6 +102,8 @@ func TestStudyController(t *testing.T) {
 	if want != got {
 		t.Errorf("want %d, got %d", want, got)
 	}
+
+	/* -- LIST -- */
 
 	// List available studies.
 	res, err = http.Get(url)
@@ -70,8 +132,9 @@ func TestStudyController(t *testing.T) {
 	studyURL := "http://localhost:8081/studies/test_study"
 	if want, got := studyURL, items[0].URL; want != got {
 		t.Errorf("want %d item, got %d", want, got)
-
 	}
+
+	/* -- GET -- */
 
 	// Get the previously posted study.
 	url = srv.addr + "/studies/test_study"
@@ -93,7 +156,7 @@ func TestStudyController(t *testing.T) {
 	}
 	res.Body.Close()
 
-	if want, got := "test_study", data.Name; want != got {
-		t.Errorf("want %s, got %s", want, got)
+	if want, got := studyData, data; !reflect.DeepEqual(want, got) {
+		t.Errorf("want %v, got %v", want, got)
 	}
 }

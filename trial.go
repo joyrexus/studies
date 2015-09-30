@@ -57,6 +57,7 @@ func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 
 	resources := []*Resource{}
 
+	// Append each item to the list of resources.
 	for _, trial := range items {
 		id := string(trial.Key)
 		url := fmt.Sprintf("http://%s/%s", c.host, id)
@@ -69,8 +70,8 @@ func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 		}
 		resources = append(resources, rsc)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resources)
 }
 
@@ -86,7 +87,7 @@ func (c *TrialController) Get(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, "NOT FOUND", 404)
+		http.Error(w, id + " not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -103,6 +104,7 @@ func (c *TrialController) Delete(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }

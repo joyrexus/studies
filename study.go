@@ -55,20 +55,20 @@ func (c *StudyController) Post(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusCreated)
 }
 
-// List handles GET requests for `/studies`, returning a list of 
+// List handles GET requests for `/studies`, returning a list of
 // available studies.
 func (c *StudyController) List(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	// Retrieve studylist items (study-id/creation-time pairs)
-	items, err := c.studylist.Items() 
+	items, err := c.studylist.Items()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 
 	resources := []*Resource{}
 
-	// 
+	// Append each item to the list of resources.
 	for _, study := range items {
 		data, err := c.studies.Get(study.Key)
 		if err != nil {
@@ -88,7 +88,6 @@ func (c *StudyController) List(w http.ResponseWriter, r *http.Request,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resources)
 }
 
@@ -98,13 +97,13 @@ func (c *StudyController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
-	key := []byte(fmt.Sprintf("/studies/%s", study))
-	data, err := c.studies.Get(key)
+	id := fmt.Sprintf("/studies/%s", study)
+	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, "NOT FOUND", 404)
+		http.Error(w, id + " not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

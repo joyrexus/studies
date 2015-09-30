@@ -26,9 +26,9 @@ type FileController struct {
 	studies *buckets.Bucket
 }
 
-// post handles POST requests for `/studies/:study/files`, storing
+// Post handles POST requests for `/studies/:study/files`, storing
 // the file data sent.
-func (c *FileController) post(w http.ResponseWriter, r *http.Request,
+func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
 	var file Resource
@@ -44,9 +44,9 @@ func (c *FileController) post(w http.ResponseWriter, r *http.Request,
 }
 
 /*
-// list handles GET requests for `/studies/:study/files`, returning a list
+// List handles GET requests for `/studies/:study/files`, returning a list
 // of available files for a particular study.
-func (c *FileController) list(w http.ResponseWriter, r *http.Request,
+func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
@@ -58,6 +58,7 @@ func (c *FileController) list(w http.ResponseWriter, r *http.Request,
 
 	resources := []*Resource{}
 
+	// Append each item to the list of resources.
 	for _, trial := range items {
 		id := string(trial.Key)
 		url := fmt.Sprintf("http://%s/%s", c.host, id)
@@ -70,15 +71,14 @@ func (c *FileController) list(w http.ResponseWriter, r *http.Request,
 		}
 		resources = append(resources, rsc)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resources)
 }
 
-/*
-// get handles GET requests for `/studies/:study/trials/:trial`, returning 
-// the raw json data payload for the requested trial.
-func (c *TrialController) get(w http.ResponseWriter, r *http.Request,
+// Get handles GET requests for `/studies/:study/files/:file`, returning 
+// the raw json data payload for the requested file.
+func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, trial := p.ByName("study"), p.ByName("trial")
@@ -88,15 +88,15 @@ func (c *TrialController) get(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, "NOT FOUND", 404)
+		http.Error(w, id + " not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// delete handles DELETE requests for `/studies/:study/trials/:trial`.
-func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
+// Delete handles DELETE requests for `/studies/:study/files/:file`.
+func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	name := p.ByName("name")
@@ -105,6 +105,7 @@ func (c *StudyController) delete(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
+	
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
