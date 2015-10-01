@@ -26,8 +26,8 @@ type FileController struct {
 	studies *buckets.Bucket
 }
 
-// Post handles POST requests for `/studies/:study/files`, storing
-// the file data sent.
+// Post handles POST requests for `/studies/:study/files` and 
+// `/files/:study/:trial`, storing the file data sent.
 func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
 
@@ -36,6 +36,8 @@ func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
+	// TODO: validate file id format
+	// Use file id as key when storing file data as value.
 	key := []byte(file.ID)
 	if err := c.studies.Put(key, file.Data); err != nil {
 		http.Error(w, err.Error(), 500)
@@ -43,13 +45,17 @@ func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusCreated)
 }
 
-// List handles GET requests for `/studies/:study/files`, returning a list
-// of available files for a particular study.
+// List handles GET requests for `/studies/:study/files` and
+// `files/:study/:trial`, returning a list of available files 
+// for a particular study or trial.
 func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	study := p.ByName("study")
+	study, trial := p.ByName("study"), p.ByName("trial")
 	prefix := fmt.Sprintf("/studies/%s/files", study)
+	if trial != "" {
+		prefix = fmt.Sprintf("/files/%s/%s", study, trial)
+	}
 	items, err := c.studies.PrefixItems([]byte(prefix))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -75,13 +81,21 @@ func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	json.NewEncoder(w).Encode(resources)
 }
 
-// Get handles GET requests for `/studies/:study/files/:file`, returning 
-// the raw json data payload for the requested file.
+// Get handles GET requests for `/studies/:study/files/:file` and
+// `/files/:study/:trial/:file`, returning the raw json data payload 
+// for the requested file.
 func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, file := p.ByName("study"), p.ByName("file")
 	id := fmt.Sprintf("/studies/%s/files/%s", study, file)
+
+	// If trial parameter specified, then a trial-level file was requested.
+	trial := p.ByName("trial")
+	if trial != "" {
+		id = fmt.Sprintf("/files/%s/%s/%s", study, trial, file)
+	}
+
 	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -94,12 +108,20 @@ func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	w.Write(data)
 }
 
-// Delete handles DELETE requests for `/studies/:study/files/:file`.
+// Delete handles DELETE requests for `/studies/:study/files/:file` and
+// `/files/:study/:trial/:file`.
 func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, file := p.ByName("study"), p.ByName("file")
 	id := fmt.Sprintf("/studies/%s/files/%s", study, file)
+
+	// If trial parameter specified, then a trial-level file was requested.
+	trial := p.ByName("trial")
+	if trial != "" {
+		id = fmt.Sprintf("/files/%s/%s/%s", study, trial, file)
+	}
+
 	err := c.studies.Delete([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)

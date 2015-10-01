@@ -18,7 +18,7 @@ func TestTrialMissing(t *testing.T) {
 	url := srv.addr + "/studies/test_study/trials"
 	res, err := http.Get(url)
 	if err != nil {
-		t.Errorf("error getting study: %v", err)
+		t.Errorf("error listing trials: %v", err)
 	}
 
 	want, got := http.StatusOK, res.StatusCode
@@ -55,7 +55,7 @@ func TestTrialMissing(t *testing.T) {
 
 	// -- DELETE -- //
 
-	// Try to delete a non-existent study.
+	// Try to delete a non-existent trial.
 	client := new(http.Client)
 	url = srv.addr + "/studies/test_study/trials/test_trial"
 
@@ -66,7 +66,7 @@ func TestTrialMissing(t *testing.T) {
 
 	res, err = client.Do(req)
 	if err != nil {
-		t.Errorf("error deleting study: %v", err)
+		t.Errorf("error deleting trial: %v", err)
 	}
 	res.Body.Close()
 
