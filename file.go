@@ -2,7 +2,7 @@ package studies
 
 import (
 	"encoding/json"
-	// "fmt"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -43,7 +43,6 @@ func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusCreated)
 }
 
-/*
 // List handles GET requests for `/studies/:study/files`, returning a list
 // of available files for a particular study.
 func (c *FileController) List(w http.ResponseWriter, r *http.Request,
@@ -54,20 +53,20 @@ func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	items, err := c.studies.PrefixItems([]byte(prefix))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
-	File}
+	}
 
 	resources := []*Resource{}
 
 	// Append each item to the list of resources.
-	for _, trial := range items {
-		id := string(trial.Key)
-		url := fmt.Sprintf("http://%s/%s", c.host, id)
+	for _, file := range items {
+		id := string(file.Key)
+		url := "http://" + c.host + id
 		rsc := &Resource{
 			Version: "1",
-			Type:    "trial",
+			Type:    "file",
 			ID:      id,
 			URL:     url,
-			Data:    trial.Value,
+			Data:    file.Value,
 		}
 		resources = append(resources, rsc)
 	}
@@ -81,8 +80,8 @@ func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	study, trial := p.ByName("study"), p.ByName("trial")
-	id := fmt.Sprintf("/studies/%s/trials/%s", study, trial)
+	study, file := p.ByName("study"), p.ByName("file")
+	id := fmt.Sprintf("/studies/%s/files/%s", study, file)
 	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -99,9 +98,9 @@ func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
-	name := p.ByName("name")
-	key := []byte(fmt.Sprintf("/studies/%s", name))
-	err := c.studies.Delete(key)
+	study, file := p.ByName("study"), p.ByName("file")
+	id := fmt.Sprintf("/studies/%s/files/%s", study, file)
+	err := c.studies.Delete([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
@@ -109,4 +108,3 @@ func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
-*/

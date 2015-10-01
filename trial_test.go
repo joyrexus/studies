@@ -229,7 +229,7 @@ func TestTrialPersistence(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	// Now ensure the deleted study doesn't exist anymore.
+	// Now ensure the deleted trial doesn't exist anymore.
 	url = srv.addr + "/studies/test_study/trials/test_trial"
 	res, err = http.Get(url)
 	if err != nil {

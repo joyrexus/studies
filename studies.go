@@ -32,12 +32,11 @@ func NewServer(addr, dbpath string) *Server {
 	mux.GET("/studies/:study/trials", control.Trial.List)
 	mux.GET("/studies/:study/trials/:trial", control.Trial.Get)
 	mux.DELETE("/studies/:study/trials/:trial", control.Trial.Delete)
-	/*
-		mux.POST("/studies/:study/files", control.File.Post)
-		mux.GET("/studies/:study/files", control.File.List)
-		mux.GET("/studies/:study/files/:file", control.File.Get)
-		mux.DELETE("/studies/:study/files/:file", control.File.Delete)
-	*/
+
+	mux.POST("/studies/:study/files", control.File.Post)
+	mux.GET("/studies/:study/files", control.File.List)
+	mux.GET("/studies/:study/files/:file", control.File.Get)
+	mux.DELETE("/studies/:study/files/:file", control.File.Delete)
 
 	return &Server{addr, mux, bux}
 }
@@ -67,12 +66,14 @@ func (s *Server) Close() {
 func NewController(host string, bux *buckets.DB) *Controller {
 	study := NewStudyController(host, bux)
 	trial := NewTrialController(host, bux)
-	return &Controller{study, trial}
+	file := NewFileController(host, bux)
+	return &Controller{study, trial, file}
 }
 
 type Controller struct {
 	Study *StudyController
 	Trial *TrialController
+	File  *FileController
 }
 
 /* -- MODELS --*/
