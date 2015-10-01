@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-func TestStudyMissing(t *testing.T) {
+func TestTrialMissing(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()
 
 	/* -- LIST -- */
 
-	// List available studies.
-	url := srv.addr + "/studies"
+	// Try to list trials of a non-existent study.
+	url := srv.addr + "/studies/test_study/trials"
 	res, err := http.Get(url)
 	if err != nil {
-		t.Errorf("error listing studies: %v", err)
+		t.Errorf("error getting study: %v", err)
 	}
 
 	want, got := http.StatusOK, res.StatusCode
@@ -38,13 +38,13 @@ func TestStudyMissing(t *testing.T) {
 		t.Errorf("want %d item, got %d", want, got)
 	}
 	
-	/* -- GET -- */
+	// -- GET -- //
 
-	// Try to get a non-existent study.
-	url = srv.addr + "/studies/test_study"
+	// Try to get a non-existent trial.
+	url = srv.addr + "/studies/test_study/trials/test_trial"
 	res, err = http.Get(url)
 	if err != nil {
-		t.Errorf("error getting study: %v", err)
+		t.Errorf("error getting trial: %v", err)
 	}
 	res.Body.Close()
 
@@ -53,11 +53,11 @@ func TestStudyMissing(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	/* -- DELETE -- */
+	// -- DELETE -- //
 
 	// Try to delete a non-existent study.
 	client := new(http.Client)
-	url = srv.addr + "/studies/test_study"
+	url = srv.addr + "/studies/test_study/trials/test_trial"
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -76,12 +76,13 @@ func TestStudyMissing(t *testing.T) {
 	}
 }
 
-func TestStudyPersistence(t *testing.T) {
+func TestTrialPersistence(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()
 
 	/* -- POST -- */
 
+	// Setup a study that will contain a trial.
 	studyData := struct {
 		Name, Description string
 	}{
@@ -116,16 +117,51 @@ func TestStudyPersistence(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	/* -- LIST -- */
+	/* -- TRIAL STUFF -- */
 
-	// List available studies.
-	res, err = http.Get(url)
-	if err != nil {
-		t.Errorf("error getting study: %v", err)
+	trialData := struct {
+		Name, Description string
+	}{
+		"test_trial",
+		"description of the test trial",
 	}
 
-	want, got = http.StatusOK, res.StatusCode
-	if want != got {
+	// Create a trial resource to be posted.
+	trial := &Resource{
+		Version: "1",
+		Type:    "trial",
+		ID:      "/studies/test_study/trials/test_trial",
+		Data:    trialData,
+		Created: time.Now(),
+	}
+
+	url = srv.addr + "/studies/test_study/trials"
+	bodyType = "application/json"
+	body, err = trial.Encode()
+	if err != nil {
+		t.Errorf("could not encode trial: %v", err)
+	}
+
+	res, err = http.Post(url, bodyType, body)
+	if err != nil {
+		t.Errorf("error posting trial: %v", err)
+	}
+	res.Body.Close()
+
+	if want, got := http.StatusCreated, res.StatusCode; want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	// -- LIST -- //
+
+	// List available trials.
+	url = srv.addr + "/studies/test_study/trials"
+	res, err = http.Get(url)
+	if err != nil {
+		t.Errorf("error listing trials: %v", err)
+	}
+
+	if want, got = http.StatusOK, res.StatusCode; want != got {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
@@ -141,19 +177,19 @@ func TestStudyPersistence(t *testing.T) {
 		t.Errorf("want %d item, got %d", want, got)
 	}
 
-	// Check expected URL of the one posted study resource.
-	studyURL := "http://localhost:8081/studies/test_study"
-	if want, got := studyURL, items[0].URL; want != got {
+	// Check expected URL of the one posted trial resource.
+	trialURL := "http://localhost:8081/studies/test_study/trials/test_trial"
+	if want, got := trialURL, items[0].URL; want != got {
 		t.Errorf("want %d item, got %d", want, got)
 	}
 
-	/* -- GET -- */
+	// -- GET -- //
 
-	// Get the previously posted study.
-	url = srv.addr + "/studies/test_study"
+	// Get the previously posted trial.
+	url = srv.addr + "/studies/test_study/trials/test_trial"
 	res, err = http.Get(url)
 	if err != nil {
-		t.Errorf("error getting study: %v", err)
+		t.Errorf("error getting trial: %v", err)
 	}
 
 	want, got = http.StatusOK, res.StatusCode
@@ -169,14 +205,14 @@ func TestStudyPersistence(t *testing.T) {
 	}
 	res.Body.Close()
 
-	if want, got := studyData, data; !reflect.DeepEqual(want, got) {
+	if want, got := trialData, data; !reflect.DeepEqual(want, got) {
 		t.Errorf("want %v, got %v", want, got)
 	}
 
-	/* -- DELETE -- */
+	// -- DELETE -- //
 
 	// Delete the previously posted study.
-	url = srv.addr + "/studies/test_study"
+	url = srv.addr + "/studies/test_study/trials/test_trial"
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		t.Errorf("error creating delete request: %v", err)
@@ -185,7 +221,7 @@ func TestStudyPersistence(t *testing.T) {
 	client := new(http.Client)
 	res, err = client.Do(req)
 	if err != nil {
-		t.Errorf("error deleting study: %v", err)
+		t.Errorf("error deleting trial: %v", err)
 	}
 	res.Body.Close()
 
@@ -194,10 +230,10 @@ func TestStudyPersistence(t *testing.T) {
 	}
 
 	// Now ensure the deleted study doesn't exist anymore.
-	url = srv.addr + "/studies/test_study"
+	url = srv.addr + "/studies/test_study/trials/test_trial"
 	res, err = http.Get(url)
 	if err != nil {
-		t.Errorf("error getting study: %v", err)
+		t.Errorf("error getting trial: %v", err)
 	}
 	res.Body.Close()
 

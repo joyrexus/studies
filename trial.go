@@ -60,7 +60,7 @@ func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 	// Append each item to the list of resources.
 	for _, trial := range items {
 		id := string(trial.Key)
-		url := fmt.Sprintf("http://%s/%s", c.host, id)
+		url := "http://" + c.host + id
 		rsc := &Resource{
 			Version: "1",
 			Type:    "trial",
