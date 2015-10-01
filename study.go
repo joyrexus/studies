@@ -28,7 +28,7 @@ func NewStudyController(host string, bux *buckets.DB) *StudyController {
 	return &StudyController{host, studies, studylist}
 }
 
-// This Controller handles requests for study resources.
+// A StudyController handles requests for study resources.
 type StudyController struct {
 	host      string
 	studies   *buckets.Bucket

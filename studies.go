@@ -11,6 +11,7 @@ import (
 
 const verbose = true // if `true` you'll see log output
 
+// NewServer creates a new studies server instance.
 func NewServer(addr, dbpath string) *Server {
 	// Open a buckets database.
 	bux, err := buckets.Open(dbpath)
@@ -41,6 +42,7 @@ func NewServer(addr, dbpath string) *Server {
 	return &Server{addr, mux, bux}
 }
 
+// A Server is an http handler providing the studies service API.
 type Server struct {
 	Addr    string
 	handler *httprouter.Router
@@ -51,10 +53,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
 }
 
+// ListenAndServe starts the http service.
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.Addr, s.handler)
 }
 
+// Close closes the server's database.
 func (s *Server) Close() {
 	s.db.Close()
 }
@@ -70,6 +74,7 @@ func NewController(host string, bux *buckets.DB) *Controller {
 	return &Controller{study, trial, file}
 }
 
+// A Controller provides handler methods for our router.
 type Controller struct {
 	Study *StudyController
 	Trial *TrialController
