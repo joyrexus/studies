@@ -3,14 +3,101 @@ package studies_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"time"
 
 	"github.com/joyrexus/studies"
 )
+
+func ExampleServer() {
+	srv := NewTestServer()
+	defer srv.Close()
+
+	/* -- POST -- */
+
+	studyData := struct {
+		Name, Description string
+	}{
+		"test_study",
+		"description of the test study",
+	}
+
+	// Create a study resource to be posted.
+	study := &Resource{
+		Version: "1",
+		Type:    "study",
+		ID:      "/studies/test_study",
+		Data:    studyData,
+		Created: time.Now(),
+	}
+
+	url := srv.addr + "/studies"
+	bodyType := "application/json"
+	body, err := study.Encode()
+	if err != nil {
+		log.Fatalf("could not encode study: %v", err)
+	}
+
+	res, err := http.Post(url, bodyType, body)
+	if err != nil {
+		log.Fatalf("error posting study: %v", err)
+	}
+	res.Body.Close()
+
+	fmt.Printf("%q created: %d\n", study.ID, res.StatusCode)
+	// "/studies/test_study" created: 201
+
+	// -- LIST -- //
+
+	// List available studies.
+	res, err = http.Get(url)
+	if err != nil {
+		log.Fatalf("error getting study: %v", err)
+	}
+
+	var items []Item
+	if err = json.NewDecoder(res.Body).Decode(&items); err != nil {
+		log.Fatalf("decoding error: %v", err)
+	}
+	res.Body.Close()
+
+	// Show that the one resource posted was the one item retrieved.
+	fmt.Printf("%d item listed: %s\n", len(items), items[0].ID)
+	fmt.Println(items[0].URL)
+	// 1 item listed: /studies/test_study
+	// http://localhost:8081/studies/test_study
+
+	// -- GET -- //
+
+	// Get the previously posted study.
+	url = srv.addr + "/studies/test_study"
+	res, err = http.Get(url)
+	if err != nil {
+		log.Fatalf("error getting study: %v", err)
+	}
+
+	var data struct {
+		Name, Description string
+	}
+	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+		log.Fatalf("decoding error: %v", err.Error())
+	}
+	res.Body.Close()
+
+	fmt.Printf("%q retrieved\n", data.Name)
+	// "test_study" retrieved
+
+	// Output:
+	// "/studies/test_study" created: 201
+	// 1 item listed: /studies/test_study
+	// http://localhost:8081/studies/test_study
+	// "test_study" retrieved
+}
 
 func NewTestServer() *TestServer {
 	dbpath := tempfile()
