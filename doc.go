@@ -39,8 +39,6 @@ The primary unit of organization is the study. A study can contain trials or "st
 
 Clients are expected to send resource representations via http POST requests with json-encoded payloads.  Clients can issue http GET requests for a list of resources (e.g., trials associated with a particular study) or a specific resource (e.g., a particular trial), where the http response will in turn be a json-encoded payload to be handled by the client.
 
----
-
 TODO: Provide an overview of required/optional fields for incoming resource representations.  For now, see the Resource type used to handle POST requests.
 */
 package xhub
