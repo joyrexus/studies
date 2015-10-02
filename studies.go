@@ -1,4 +1,4 @@
-package studies
+package xhub
 
 import (
 	"encoding/json"

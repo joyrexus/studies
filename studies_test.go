@@ -1,4 +1,4 @@
-package studies_test
+package xhub_test
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/joyrexus/studies"
+	"github.com/joyrexus/xhub"
 )
 
 func ExampleServer() {
@@ -101,7 +101,7 @@ func ExampleServer() {
 
 func NewTestServer() *TestServer {
 	dbpath := tempfile()
-	handler := studies.NewServer("localhost:8081", dbpath)
+	handler := xhub.NewServer("localhost:8081", dbpath)
 	testsrv := httptest.NewServer(handler)
 	return &TestServer{testsrv, testsrv.URL, dbpath}
 }

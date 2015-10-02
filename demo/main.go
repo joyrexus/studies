@@ -11,16 +11,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/joyrexus/studies"
+	"github.com/joyrexus/xhub"
 )
 
 const verbose = false // if `true` you'll see log output
 
 func main() {
-	// Create a new studies server.
+	// Create a new xhub server.
 	addr := "127.0.0.1:8081" // server address to use
-	dbfile := "studies.db"   // path to file to use for persisting study data
-	srv := studies.NewServer(addr, dbfile)
+	dbfile := "xhub.db"   // path to file to use for persisting study data
+	srv := xhub.NewServer(addr, dbfile)
 
 	// Run our server as an http test server.
 	//
