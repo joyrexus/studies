@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Ensure we can properly handle requests for non-existent trials.
 func TestTrialMissing(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()
@@ -76,6 +77,7 @@ func TestTrialMissing(t *testing.T) {
 	}
 }
 
+// Ensure we can store, list, retrieve, and delete trials.
 func TestTrialPersistence(t *testing.T) {
 	srv := NewTestServer()
 	defer srv.Close()

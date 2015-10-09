@@ -100,8 +100,7 @@ func (c *TrialController) Delete(w http.ResponseWriter, r *http.Request,
 
 	study, trial := p.ByName("study"), p.ByName("trial")
 	id := fmt.Sprintf("/studies/%s/trials/%s", study, trial)
-	err := c.studies.Delete([]byte(id))
-	if err != nil {
+	if err := c.studies.Delete([]byte(id)); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 
