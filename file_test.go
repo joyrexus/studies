@@ -365,7 +365,7 @@ func TestTrialFilePersistence(t *testing.T) {
 		"description of the test file",
 	}
 
-	// Create a file resource to be posted.
+	// Create a trial-level file resource to be posted.
 	file := &Resource{
 		Version: "1",
 		Type:    "fie",
@@ -481,4 +481,3 @@ func TestTrialFilePersistence(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 }
-

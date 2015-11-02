@@ -37,7 +37,7 @@ func TestStudyMissing(t *testing.T) {
 	if got != want {
 		t.Errorf("want %d item, got %d", want, got)
 	}
-	
+
 	/* -- GET -- */
 
 	// Try to get a non-existent study.
@@ -312,7 +312,8 @@ func TestStudyDelete(t *testing.T) {
 
 	// FILE
 	//
-	// Post a file under the newly posted study.
+	// Post a file under the newly posted study as well as a file
+	// under the newly posted trial.
 
 	fileData := struct {
 		Name, Description string
@@ -321,10 +322,10 @@ func TestStudyDelete(t *testing.T) {
 		"description of the test file",
 	}
 
-	// Create a file resource to be posted.
+	// Create a study-level file resource to be posted.
 	file := &Resource{
 		Version: "1",
-		Type:    "fie",
+		Type:    "file",
 		ID:      "/studies/test_study/files/test_file",
 		Data:    fileData,
 		Created: time.Now(),
@@ -347,25 +348,53 @@ func TestStudyDelete(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	// Get the previously posted file.
-	url = srv.addr + "/studies/test_study/files/test_file"
-	res, err = http.Get(url)
+	// Create a trial-level file resource to be posted.
+	file = &Resource{
+		Version: "1",
+		Type:    "file",
+		ID:      "/files/test_study/test_trial/test_file",
+		Data:    fileData,
+		Created: time.Now(),
+	}
+
+	url = srv.addr + "/files/test_study/test_trial"
+	bodyType = "application/json"
+	body, err = file.Encode()
+
+	res, err = http.Post(url, bodyType, body)
 	if err != nil {
-		t.Errorf("error getting file: %v", err)
-	}
-
-	want, got = http.StatusOK, res.StatusCode
-	if want != got {
-		t.Errorf("want %d, got %d", want, got)
-	}
-
-	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
-		t.Errorf("decoding error: %v", err.Error())
+		t.Errorf("error posting file: %v", err)
 	}
 	res.Body.Close()
 
-	if want, got := fileData, data; !reflect.DeepEqual(want, got) {
-		t.Errorf("want %v, got %v", want, got)
+	if want, got := http.StatusCreated, res.StatusCode; want != got {
+		t.Errorf("want %d, got %d", want, got)
+	}
+
+	// Get the previously posted files.
+	for _, id := range []string{
+		"/studies/test_study/files/test_file",
+		"/files/test_study/test_trial/test_file",
+	} {
+		url = srv.addr + id
+		res, err = http.Get(url)
+		if err != nil {
+			t.Errorf("error getting file: %v", err)
+		}
+
+		want, got = http.StatusOK, res.StatusCode
+		if want != got {
+			t.Errorf("want %d, got %d", want, got)
+		}
+
+		if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+			t.Errorf("error decoding %s: %v", url, err.Error())
+		}
+		res.Body.Close()
+
+		if want, got := fileData, data; !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
+		}
 	}
 
 	// DELETE STUDY
@@ -402,16 +431,24 @@ func TestStudyDelete(t *testing.T) {
 		t.Errorf("want %d, got %d", want, got)
 	}
 
-	// Ensure the posted file doesn't exist anymore.
-	url = srv.addr + "/studies/test_study/files/test_file"
-	res, err = http.Get(url)
-	if err != nil {
-		t.Errorf("error getting file: %v", err)
-	}
-	res.Body.Close()
+	// Ensure the posted files don't exist anymore.
+	for _, id := range []string{
+		"/studies/test_study/files/test_file",
+		"/files/test_study/test_trial/test_file",
+	} {
+		url = srv.addr + id
+		res, err = http.Get(url)
+		if err != nil {
+			t.Errorf("error getting file: %v", err)
+		}
+		res.Body.Close()
 
-	// Ensure we get a StatusNoContent (204) response.
-	if want, got := http.StatusNoContent, res.StatusCode; want != got {
-		t.Errorf("want %d, got %d", want, got)
+		// Ensure we get a StatusNoContent (204) response.
+		if want, got := http.StatusNoContent, res.StatusCode; want != got {
+			t.Errorf(
+				"want status code %d, but got %d when getting %s",
+				want, got, url,
+			)
+		}
 	}
 }

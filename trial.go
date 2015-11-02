@@ -75,7 +75,7 @@ func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 	json.NewEncoder(w).Encode(resources)
 }
 
-// Get handles GET requests for `/studies/:study/trials/:trial`, returning 
+// Get handles GET requests for `/studies/:study/trials/:trial`, returning
 // the raw json data payload for the requested trial.
 func (c *TrialController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
@@ -87,21 +87,40 @@ func (c *TrialController) Get(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, id + " not found", http.StatusNoContent)
+		http.Error(w, id+" not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// Delete handles DELETE requests for `/studies/:study/trials/:trial`.
+// Delete handles DELETE requests for `/studies/:study/trials/:trial`,
+// deleting all items from the studies bucket that are associated with
+// the specified study and trial.
 func (c *TrialController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study, trial := p.ByName("study"), p.ByName("trial")
-	id := fmt.Sprintf("/studies/%s/trials/%s", study, trial)
-	if err := c.studies.Delete([]byte(id)); err != nil {
-		http.Error(w, err.Error(), 500)
+
+	// delete all items with these study + trial prefixes
+	for _, pre := range []string{
+		fmt.Sprintf("/studies/%s/trials/%s", study, trial),
+		fmt.Sprintf("/files/%s/%s", study, trial),
+	} {
+		items, err := c.studies.PrefixItems([]byte(pre))
+		if err != nil {
+			e := fmt.Sprintf("couldn't retrieve items with prefix %q: %v",
+				pre,
+				err,
+			)
+			http.Error(w, e, 500)
+		}
+		for _, item := range items {
+			if err := c.studies.Delete(item.Key); err != nil {
+				e := fmt.Sprintf("couldn't delete item %q: %v", item.Key, err)
+				http.Error(w, e, 500)
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

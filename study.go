@@ -103,7 +103,7 @@ func (c *StudyController) Get(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, id + " not found", http.StatusNoContent)
+		http.Error(w, id+" not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -116,36 +116,36 @@ func (c *StudyController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
 	study := p.ByName("study")
-	key := []byte(fmt.Sprintf("/studies/%s", study))
-	// Delete item in main studies bucket.
-	if err := c.studies.Delete(key); err != nil {
+	// Delete all items associated with study.
+	if err := c.DeleteChildItems(study); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 	// Delete item in studylist bucket.
+	key := []byte("/studies/" + study)
 	if err := c.studylist.Delete(key); err != nil {
-		http.Error(w, err.Error(), 500)
-	}
-	// Delete all items associated with study.
-	if err := c.DeleteItems(key); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
-
-// DeleteItems deletes all items in studies bucket with key prefix.
-func (c *StudyController) DeleteItems(prefix []byte) error {
-	items, err := c.studies.PrefixItems([]byte(prefix))
-	if err != nil {
-		return fmt.Errorf("couldn't retrieve items with prefix %q: %v",
-			prefix, 
-			err,
-		)
-	}
-	for _, item := range items {
-		if err := c.studies.Delete(item.Key); err != nil {
-			return fmt.Errorf("couldn't delete item %q: %v", item.Key, err)
+// DeleteChildItems deletes all items from the studies bucket that are 
+// associated with the specified study.  This includes both trial 
+// and file resources.
+func (c *StudyController) DeleteChildItems(study string) error {
+	for _, pre := range []string{"/studies/", "/files/"} {
+		prefix := []byte(pre + study)
+		items, err := c.studies.PrefixItems(prefix)
+		if err != nil {
+			return fmt.Errorf("couldn't retrieve items with prefix %q: %v",
+				prefix,
+				err,
+			)
+		}
+		for _, item := range items {
+			if err := c.studies.Delete(item.Key); err != nil {
+				return fmt.Errorf("couldn't delete item %q: %v", item.Key, err)
+			}
 		}
 	}
 	return nil
