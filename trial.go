@@ -35,10 +35,12 @@ func (c *TrialController) Post(w http.ResponseWriter, r *http.Request,
 	err := json.NewDecoder(r.Body).Decode(&trial)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	key := []byte(trial.ID)
 	if err := c.studies.Put(key, trial.Data); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -53,6 +55,7 @@ func (c *TrialController) List(w http.ResponseWriter, r *http.Request,
 	items, err := c.studies.PrefixItems([]byte(prefix))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 
 	resources := []*Resource{}
@@ -85,9 +88,11 @@ func (c *TrialController) Get(w http.ResponseWriter, r *http.Request,
 	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	if data == nil {
 		http.Error(w, id+" not found", http.StatusNoContent)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -114,6 +119,7 @@ func (c *TrialController) Delete(w http.ResponseWriter, r *http.Request,
 				err,
 			)
 			http.Error(w, e, 500)
+			return
 		}
 		for _, item := range items {
 			if err := c.studies.Delete(item.Key); err != nil {

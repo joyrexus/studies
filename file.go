@@ -35,12 +35,14 @@ func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	err := json.NewDecoder(r.Body).Decode(&file)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	// TODO: validate file id format
 	// Use file id as key when storing file data as value.
 	key := []byte(file.ID)
 	if err := c.studies.Put(key, file.Data); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -59,6 +61,7 @@ func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	items, err := c.studies.PrefixItems([]byte(prefix))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 
 	resources := []*Resource{}
@@ -99,9 +102,11 @@ func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	if data == nil {
 		http.Error(w, id+" not found", http.StatusNoContent)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -125,6 +130,7 @@ func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	err := c.studies.Delete([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

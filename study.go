@@ -48,14 +48,17 @@ func (c *StudyController) Post(w http.ResponseWriter, r *http.Request,
 	err := json.NewDecoder(r.Body).Decode(&study)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	key := []byte(study.ID)
 	now := []byte(time.Now().Format(time.RFC3339Nano))
 	if c.studylist.Put(key, now); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	if err := c.studies.Put(key, study.Data); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -69,6 +72,7 @@ func (c *StudyController) List(w http.ResponseWriter, r *http.Request,
 	items, err := c.studylist.Items()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 
 	resources := []*Resource{}
@@ -78,6 +82,7 @@ func (c *StudyController) List(w http.ResponseWriter, r *http.Request,
 		data, err := c.studies.Get(study.Key)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
+			return
 		}
 		id := string(study.Key)
 		url := "http://" + c.host + id
@@ -106,9 +111,11 @@ func (c *StudyController) Get(w http.ResponseWriter, r *http.Request,
 	data, err := c.studies.Get([]byte(id))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	if data == nil {
 		http.Error(w, id+" not found", http.StatusNoContent)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -125,11 +132,13 @@ func (c *StudyController) Delete(w http.ResponseWriter, r *http.Request,
 	// Delete all items associated with study.
 	if err := c.DeleteChildItems(study); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	// Delete item in studylist bucket.
 	key := []byte("/studies/" + study)
 	if err := c.studylist.Delete(key); err != nil {
 		http.Error(w, err.Error(), 500)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
