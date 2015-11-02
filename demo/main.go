@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
+	// "os"
 	"time"
 
 	"github.com/joyrexus/xhub"
@@ -30,7 +30,7 @@ func main() {
 	testsrv := httptest.NewServer(srv)
 	defer srv.Close()
 	defer testsrv.Close()
-	defer os.Remove(dbfile)
+	// defer os.Remove(dbfile)
 
 	// Setup study resources for our client to post.
 	var studies []*Resource

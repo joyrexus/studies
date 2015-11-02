@@ -38,7 +38,7 @@ func TestFileMissing(t *testing.T) {
 	if got != want {
 		t.Errorf("want %d item, got %d", want, got)
 	}
-	
+
 	// -- GET -- //
 
 	// Try to get a non-existent file.
@@ -275,7 +275,7 @@ func TestTrialFileMissing(t *testing.T) {
 	if got != want {
 		t.Errorf("want %d item, got %d", want, got)
 	}
-	
+
 	// -- GET -- //
 
 	// Try to get a non-existent file.

@@ -26,7 +26,7 @@ type FileController struct {
 	studies *buckets.Bucket
 }
 
-// Post handles POST requests for `/studies/:study/files` and 
+// Post handles POST requests for `/studies/:study/files` and
 // `/files/:study/:trial`, storing the file data sent.
 func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 	_ httprouter.Params) {
@@ -46,7 +46,7 @@ func (c *FileController) Post(w http.ResponseWriter, r *http.Request,
 }
 
 // List handles GET requests for `/studies/:study/files` and
-// `files/:study/:trial`, returning a list of available files 
+// `files/:study/:trial`, returning a list of available files
 // for a particular study or trial.
 func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
@@ -82,7 +82,7 @@ func (c *FileController) List(w http.ResponseWriter, r *http.Request,
 }
 
 // Get handles GET requests for `/studies/:study/files/:file` and
-// `/files/:study/:trial/:file`, returning the raw json data payload 
+// `/files/:study/:trial/:file`, returning the raw json data payload
 // for the requested file.
 func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
@@ -101,7 +101,7 @@ func (c *FileController) Get(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 	if data == nil {
-		http.Error(w, id + " not found", http.StatusNoContent)
+		http.Error(w, id+" not found", http.StatusNoContent)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -126,7 +126,7 @@ func (c *FileController) Delete(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }

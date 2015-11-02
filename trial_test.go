@@ -38,7 +38,7 @@ func TestTrialMissing(t *testing.T) {
 	if got != want {
 		t.Errorf("want %d item, got %d", want, got)
 	}
-	
+
 	// -- GET -- //
 
 	// Try to get a non-existent trial.

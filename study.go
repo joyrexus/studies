@@ -11,6 +11,11 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type Study struct {
+	Name        string `json:"name"`
+	Description string `json:"desc"`
+}
+
 // NewStudyController initializes a new instance of our study controller.
 func NewStudyController(host string, bux *buckets.DB) *StudyController {
 	// Create/open bucket for storing study-related data.
@@ -111,7 +116,8 @@ func (c *StudyController) Get(w http.ResponseWriter, r *http.Request,
 }
 
 // Delete handles DELETE requests for `/studies/:study`, deleting the entries
-// for the given study.
+// for the given study.  All items associated with the specified study are
+// deleted, both its trial and file resources.
 func (c *StudyController) Delete(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
 
@@ -129,9 +135,8 @@ func (c *StudyController) Delete(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusOK)
 }
 
-// DeleteChildItems deletes all items from the studies bucket that are 
-// associated with the specified study.  This includes both trial 
-// and file resources.
+// DeleteChildItems deletes all items in the studies bucket with a prefix
+// of `/studies/:study` or `/files/:study`.
 func (c *StudyController) DeleteChildItems(study string) error {
 	for _, pre := range []string{"/studies/", "/files/"} {
 		prefix := []byte(pre + study)
@@ -149,4 +154,60 @@ func (c *StudyController) DeleteChildItems(study string) error {
 		}
 	}
 	return nil
+}
+
+// View handles GET requests for `view/studies/:study`, returning a web
+// page with details for the requested study.
+func (c *StudyController) View(w http.ResponseWriter, r *http.Request,
+	p httprouter.Params) {
+
+	id := "/studies/" + p.ByName("study")
+	data, err := c.studies.Get([]byte(id))
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if data == nil {
+		http.Error(w, id+" not found", http.StatusNoContent)
+		return
+	}
+
+	var study Study
+	if err := json.Unmarshal(data, &study); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	err = templates.ExecuteTemplate(w, "study_view.html", study)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+}
+
+// Edit handles GET requests for `edit/studies/:study`, returning a web
+// page with a form for editing the details of the requested study.
+func (c *StudyController) Edit(w http.ResponseWriter, r *http.Request,
+	p httprouter.Params) {
+
+	id := "/studies/" + p.ByName("study")
+	data, err := c.studies.Get([]byte(id))
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if data == nil {
+		http.Error(w, id+" not found", http.StatusNoContent)
+		return
+	}
+
+	var study Study
+	if err := json.Unmarshal(data, &study); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	err = templates.ExecuteTemplate(w, "study_edit.html", study)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
 }
