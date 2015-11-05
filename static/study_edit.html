@@ -1,10 +1,8 @@
 <h1>Editing {{.Name}}</h1>
 
-<form action="/studies" method="POST">
+<form action="/save/studies" method="POST">
     <div>
-        <textarea name="desc" rows="20" cols="80">
-            {{.Description}}
-        </textarea>
+        <textarea name="desc" rows="20" cols="80">{{.Description}}</textarea>
     </div>
     <div>
         <input type="submit" value="Save">

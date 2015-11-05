@@ -52,6 +52,7 @@ func NewServer(addr, dbpath string) *Server {
 	// Setup index/make/view/edit handlers.
 	// mux.GET("/view/studies", control.Study.Index)
 	// mux.GET("/make/studies", control.Study.Make)
+	mux.POST("/save/studies", control.Study.Save)
 	mux.GET("/view/studies/:study", control.Study.View)
 	mux.GET("/edit/studies/:study", control.Study.Edit)
 

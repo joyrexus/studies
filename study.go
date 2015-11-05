@@ -165,7 +165,7 @@ func (c *StudyController) DeleteChildItems(study string) error {
 	return nil
 }
 
-// View handles GET requests for `view/studies/:study`, returning a web
+// View handles GET requests for `/view/studies/:study`, returning a web
 // page with details for the requested study.
 func (c *StudyController) View(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
@@ -193,7 +193,7 @@ func (c *StudyController) View(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-// Edit handles GET requests for `edit/studies/:study`, returning a web
+// Edit handles GET requests for `/edit/studies/:study`, returning a web
 // page with a form for editing the details of the requested study.
 func (c *StudyController) Edit(w http.ResponseWriter, r *http.Request,
 	p httprouter.Params) {
@@ -220,3 +220,29 @@ func (c *StudyController) Edit(w http.ResponseWriter, r *http.Request,
 		http.Error(w, err.Error(), 500)
 	}
 }
+// Save handles POST requests for `/save/studies`, storing the study data sent.
+func (c *StudyController) Save(w http.ResponseWriter, r *http.Request,
+	_ httprouter.Params) {
+
+	fmt.Println(r.FormValue("desc"))
+	/*
+	study Resource
+	err := json.NewDecoder(r.Body).Decode(&study)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	key := []byte(study.ID)
+	now := []byte(time.Now().Format(time.RFC3339Nano))
+	if c.studylist.Put(key, now); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if err := c.studies.Put(key, study.Data); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	*/
+	w.WriteHeader(http.StatusCreated)
+}
+
